@@ -1,0 +1,8 @@
+*.exe
+__pycache__/
+*.py[cod]
+*$py.class
+backups/
+*.log
+.env
+*.db

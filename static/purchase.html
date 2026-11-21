@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Purchase & Order (PO) - Divisi Pembelian</title>
+    <style>
+        :root {
+            --primary: #7c3aed;
+            --primary-hover: #6d28d9;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 24px; line-height: 1.5; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; flex-wrap: wrap; gap: 16px;
+            background: var(--card-bg); border: 1px solid var(--border);
+            padding: 16px 22px; border-radius: 14px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            border-left: 6px solid var(--primary);
+        }
+        .brand-box { display: flex; align-items: center; gap: 14px; }
+        .brand-logo {
+            width: 56px; height: 56px; border-radius: 10px; object-fit: contain;
+            border: 1px solid var(--border); background: #f8fafc; padding: 4px; display: none;
+        }
+        .brand-box h1 { font-size: 1.4rem; color: #0f172a; }
+        .brand-box p { color: var(--text-muted); font-size: 0.86rem; }
+        .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+        .live-clock {
+            background: #0f172a; color: #f8fafc; padding: 8px 14px;
+            border-radius: 10px; text-align: right; font-variant-numeric: tabular-nums; min-width: 170px;
+        }
+        .live-clock .clock-time { font-size: 1.1rem; font-weight: 700; color: #c4b5fd; }
+        .live-clock .clock-date { font-size: 0.75rem; color: #cbd5e1; }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px; margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .stat-card .label { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+        .stat-card .value { font-size: 1.38rem; font-weight: 700; color: var(--primary); margin-top: 4px; }
+
+        .restock-card {
+            background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px;
+            padding: 14px 18px; margin-bottom: 20px; display: none;
+        }
+        .restock-card h3 { font-size: 0.95rem; color: #92400e; margin-bottom: 8px; }
+        .restock-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .restock-chip {
+            background: #ffffff; border: 1px solid #f59e0b; border-radius: 8px;
+            padding: 6px 10px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .restock-chip button {
+            background: var(--primary); color: #fff; border: none; border-radius: 6px;
+            padding: 3px 8px; font-size: 0.76rem; font-weight: 600; cursor: pointer;
+        }
+
+        .main-layout {
+            display: grid; grid-template-columns: 390px 1fr; gap: 24px; align-items: start;
+        }
+        @media (max-width: 1040px) { .main-layout { grid-template-columns: 1fr; } }
+
+        .card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 22px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .card h2 {
+            font-size: 1.1rem; margin-bottom: 16px; padding-bottom: 10px;
+            border-bottom: 1px solid var(--border); color: #0f172a;
+        }
+        .db-info-tag {
+            display: inline-block; background: #ede9fe; color: #5b21b6;
+            font-size: 0.74rem; font-weight: 600; padding: 3px 9px; border-radius: 6px; margin-bottom: 8px;
+        }
+
+        .form-group { margin-bottom: 13px; }
+        .form-group.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .qty-row { display: grid; grid-template-columns: 1fr 1.2fr 1.3fr; gap: 10px; }
+        label { display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 5px; color: #334155; }
+        input, select, textarea {
+            width: 100%; padding: 9px 11px; border: 1px solid var(--border);
+            border-radius: 8px; font-size: 0.9rem; background: #fff; color: var(--text);
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+        }
+        input[readonly] { background: #f1f5f9; font-weight: 700; color: var(--primary); }
+        textarea { resize: vertical; min-height: 62px; }
+
+        .stock-hint {
+            display: none; margin-top: 6px; padding: 8px 10px; border-radius: 8px;
+            font-size: 0.8rem; background: #f5f3ff; border: 1px solid #ddd6fe; color: #5b21b6;
+        }
+
+        .btn-group { display: flex; gap: 8px; margin-top: 14px; }
+        button, .btn-link {
+            cursor: pointer; border: none; border-radius: 8px; padding: 10px 16px;
+            font-weight: 600; font-size: 0.9rem; transition: all 0.15s; text-decoration: none;
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; flex: 1; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: #e2e8f0; color: #334155; }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn-export { background: var(--success); color: #fff; }
+        .btn-export:hover { background: #059669; }
+        .btn-gudang { background: #2563eb; color: #fff; }
+        .btn-gudang:hover { background: #1d4ed8; }
+
+        .toolbar { margin-bottom: 14px; }
+        .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filters input[type="search"] { flex: 1; min-width: 200px; }
+        .filters select { width: auto; min-width: 140px; }
+
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+        th, td { padding: 10px 11px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+        th { background: #f8fafc; font-weight: 700; color: #334155; white-space: nowrap; }
+        th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        tr:hover td { background: #f8fafc; }
+
+        .badge {
+            display: inline-block; padding: 3px 8px; border-radius: 6px;
+            font-size: 0.75rem; font-weight: 600; background: #e2e8f0; color: #334155;
+        }
+        .badge-cat { background: #e0e7ff; color: #3730a3; }
+        .st-pengajuan { background: #fef3c7; color: #92400e; }
+        .st-dipesan { background: #dbeafe; color: #1e40af; }
+        .st-diterima { background: #dcfce7; color: #166534; }
+        .st-batal { background: #fee2e2; color: #991b1b; }
+
+        .action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
+        .btn-sm { padding: 5px 9px; font-size: 0.76rem; border-radius: 6px; }
+        .btn-terima { background: #10b981; color: #fff; }
+        .btn-terima:hover { background: #059669; }
+        .btn-edit { background: #f59e0b; color: #fff; }
+        .btn-delete { background: #ef4444; color: #fff; }
+        .empty-state { text-align: center; padding: 28px; color: var(--text-muted); }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; background: #fff; }
+            .main-layout { grid-template-columns: 1fr; }
+            .card { border: none; box-shadow: none; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand-box">
+                <img id="headerLogo" class="brand-logo" alt="Logo">
+                <div>
+                    <h1 id="headerTitle">🛒 Sistem Purchase & Order Barang (PO)</h1>
+                    <p id="headerSubtitle">Divisi Pembelian — Terhubung Otomatis ke 4 Gudang (ME, IT, Minuman, Makanan)</p>
+                    <div id="lanInfoBox" class="no-print" style="display:none; margin-top:6px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:4px 10px; border-radius:8px; font-size:0.78rem; font-weight:600;"></div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="live-clock" id="clockContainer">
+                    <div class="clock-time" id="liveTime">00:00:00 WIB</div>
+                    <div class="clock-date" id="liveDate">Memuat tanggal...</div>
+                </div>
+                <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <a href="/" class="btn-link btn-gudang">📦 Halaman Gudang / Stok</a>
+                    <button class="btn-export" onclick="exportPurchaseCSV()">⬇️ Export CSV / Excel (Purchase)</button>
+                    <button class="btn-secondary" onclick="window.print()">🖨️ Cetak PO</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Ringkasan Statistik Purchase -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Data PO</div>
+                <div class="value" id="statTotalPO">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Menunggu Barang Datang (PR / PO)</div>
+                <div class="value" id="statPendingPO" style="color:#d97706;">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Sudah Diterima ke Gudang</div>
+                <div class="value" id="statReceivedPO" style="color:#059669;">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Nilai Pembelian (Rp)</div>
+                <div class="value" id="statTotalRupiah" style="color:#7c3aed;">Rp 0</div>
+            </div>
+        </div>
+
+        <!-- Daftar Cepat Barang Gudang yang Menipis / Habis -->
+        <div id="restockCard" class="restock-card no-print">
+            <h3>⚠️ Permintaan Restock dari Gudang (Stok Menipis / Habis) — Klik barang untuk langsung buat PO:</h3>
+            <div id="restockChips" class="restock-chips"></div>
+        </div>
+
+        <div class="main-layout">
+            <!-- Form Input PO -->
+            <div class="card no-print">
+                <span class="db-info-tag">Database Terpisah: purchase.db</span>
+                <h2 id="formTitle">➕ Buat Purchase Order (PO) Baru</h2>
+                <form onsubmit="savePurchase(event)">
+                    <input type="hidden" id="poId">
+
+                    <div class="form-group two-col">
+                        <div>
+                            <label for="tanggal_lengkap">Tanggal PO *</label>
+                            <input type="date" id="tanggal_lengkap" required>
+                        </div>
+                        <div>
+                            <label for="no_po">No. PO <span style="font-weight:400; font-size:0.74rem; color:#64748b;">(kosong = otomatis)</span></label>
+                            <input type="text" id="no_po" placeholder="Otomatis: PO-202611-001">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="supplier">Nama Supplier / Toko / Vendor *</label>
+                        <input type="text" id="supplier" placeholder="Contoh: PT Sumber Teknik, Toko Baut Jaya..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nama_barang">Pilih Barang (dari Master Barang) *</label>
+                        <input type="text" id="nama_barang" list="masterList" placeholder="Ketik / pilih nama barang..." required oninput="onBarangInput()">
+                        <datalist id="masterList"></datalist>
+                        <div id="barangHint" class="stock-hint"></div>
+                    </div>
+
+                    <div class="form-group two-col">
+                        <div>
+                            <label for="gudang">Gudang Divisi Tujuan *</label>
+                            <select id="gudang" onchange="onGudangPOChange()">
+                                <option value="Gudang ME">⚡ Gudang ME</option>
+                                <option value="Gudang IT">💻 Gudang IT</option>
+                                <option value="Gudang Minuman">🍷 Gudang Minuman</option>
+                                <option value="Gudang Makanan">🥩 Gudang Makanan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="sub_lokasi">Sub-Lokasi Penyimpanan</label>
+                            <input type="text" id="sub_lokasi" list="subLokasiPOList" placeholder="Freezer / Chiller / Rak...">
+                            <datalist id="subLokasiPOList"></datalist>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Jumlah (Bisa Desimal misal 2.5 Kg) & Nilai Pembelian (Rp)</label>
+                        <div class="qty-row">
+                            <div>
+                                <label for="jumlah" style="font-size:0.75rem; font-weight:500;">Jumlah Beli *</label>
+                                <input type="number" id="jumlah" value="1" min="0.01" step="any" required oninput="hitungTotalHarga()">
+                            </div>
+                            <div>
+                                <label for="harga_satuan" style="font-size:0.75rem; font-weight:500;">Harga Satuan (Rp)</label>
+                                <input type="number" id="harga_satuan" value="0" min="0" required oninput="hitungTotalHarga()">
+                            </div>
+                            <div>
+                                <label for="total_harga" style="font-size:0.75rem; font-weight:500;">Total Harga (Rp)</label>
+                                <input type="number" id="total_harga" value="0" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group two-col">
+                        <div>
+                            <label for="status">Status Purchase *</label>
+                            <select id="status">
+                                <option value="pengajuan">📝 Pengajuan (PR)</option>
+                                <option value="dipesan" selected>🚚 Dipesan ke Supplier (PO)</option>
+                                <option value="diterima">✅ Langsung Diterima (+ Stok Gudang)</option>
+                                <option value="batal">✖ Dibatalkan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tanggal_expired">Tgl Kadaluarsa <span style="font-weight:400; font-size:0.74rem; color:#64748b;">(khusus makanan/minuman)</span></label>
+                            <input type="date" id="tanggal_expired">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lokasi_tujuan">Keterangan Lokasi Penerima</label>
+                        <input type="text" id="lokasi_tujuan" value="Gudang Utama" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="keterangan">Keterangan / No. Faktur / Catatan</label>
+                        <textarea id="keterangan" placeholder="Contoh: Pembelian rutin bulanan, No. Nota INV-009..."></textarea>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn-primary" id="submitBtn">Simpan PO</button>
+                        <button type="button" class="btn-secondary" id="cancelBtn" style="display:none;" onclick="resetForm()">Batal</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tabel Daftar PO -->
+            <div class="card">
+                <h2>📋 Daftar Purchase Order (PO) & Riwayat Pembelian</h2>
+
+                <div class="toolbar no-print">
+                    <div class="filters">
+                        <input type="search" id="searchInput" placeholder="🔍 Cari No. PO, supplier, nama barang, sub-lokasi..." oninput="loadPurchases()">
+                        <select id="filterGudang" onchange="loadPurchases()">
+                            <option value="">Semua Gudang Divisi</option>
+                            <option value="Gudang ME">⚡ Gudang ME</option>
+                            <option value="Gudang IT">💻 Gudang IT</option>
+                            <option value="Gudang Minuman">🍷 Gudang Minuman</option>
+                            <option value="Gudang Makanan">🥩 Gudang Makanan</option>
+                        </select>
+                        <select id="filterKategori" onchange="loadPurchases()">
+                            <option value="">Semua Kategori</option>
+                        </select>
+                        <select id="filterStatus" onchange="loadPurchases()">
+                            <option value="">Semua Status</option>
+                            <option value="pengajuan">📝 Pengajuan (PR)</option>
+                            <option value="dipesan">🚚 Dipesan (PO)</option>
+                            <option value="diterima">✅ Sudah Diterima</option>
+                            <option value="batal">✖ Dibatalkan</option>
+                        </select>
+                        <select id="filterBulan" onchange="loadPurchases()">
+                            <option value="">Semua Bulan</option>
+                            <option value="1">Januari</option>
+                            <option value="2">Februari</option>
+                            <option value="3">Maret</option>
+                            <option value="4">April</option>
+                            <option value="5">Mei</option>
+                            <option value="6">Juni</option>
+                            <option value="7">Juli</option>
+                            <option value="8">Agustus</option>
+                            <option value="9">September</option>
+                            <option value="10">Oktober</option>
+                            <option value="11">November</option>
+                            <option value="12">Desember</option>
+                        </select>
+                        <input type="number" id="filterTahun" placeholder="Tahun" min="2000" max="2100" oninput="loadPurchases()" style="width:100px;">
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Tanggal</th>
+                                <th>No. PO</th>
+                                <th>Gudang & Sub-Lokasi</th>
+                                <th>Supplier</th>
+                                <th>Kode & Nama Barang</th>
+                                <th class="num">Jumlah</th>
+                                <th class="num">Harga Satuan</th>
+                                <th class="num">Total (Rp)</th>
+                                <th>Tgl Exp</th>
+                                <th>Status</th>
+                                <th>Keterangan</th>
+                                <th class="no-print">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="poTableBody">
+                            <tr><td colspan="13" class="empty-state">Memuat data purchase...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BULAN_PENDEK = ["", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+        const NAMA_HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+        const NAMA_BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        let purchases = [];
+        let masterBarang = [];
+        let categories = [];
+        let gudangList = [];
+        let appSettings = { format_tanggal_export: "DD/MM/YYYY", tampilkan_jam: "1", zona_waktu: "WIB", format_jam_24: "1" };
+
+        async function loadNetworkInfo() {
+            try {
+                const res = await fetch("/api/network-info");
+                if (!res.ok) return;
+                const data = await res.json();
+                gudangList = data.gudang_list || [];
+                const urls = data.urls || [];
+                const lanBox = document.getElementById("lanInfoBox");
+                if (urls.length > 0 && lanBox) {
+                    const poUrls = urls.map(u => `${u}/purchase.html`);
+                    lanBox.innerHTML = `📡 Akses LAN / Wi-Fi (Purchase): <code>${escapeHtml(poUrls.join(" / "))}</code>`;
+                    lanBox.style.display = "inline-block";
+                }
+
+                // Render dynamic options gudang di form & filter
+                const selGud = document.getElementById("gudang");
+                if (selGud) {
+                    const prev = selGud.value;
+                    selGud.innerHTML = gudangList.map(g => `<option value="${escapeHtml(g.nama)}">${escapeHtml(g.label || g.nama)}</option>`).join("");
+                    if (prev) selGud.value = prev;
+                }
+                const filGud = document.getElementById("filterGudang");
+                if (filGud) {
+                    const prev = filGud.value;
+                    filGud.innerHTML = `<option value="">Semua Gudang Divisi</option>` + gudangList.map(g => `<option value="${escapeHtml(g.nama)}">${escapeHtml(g.label || g.nama)}</option>`).join("");
+                    if (prev) filGud.value = prev;
+                }
+
+                updateSubLokasiPODatalist(document.getElementById("gudang").value);
+            } catch (e) {}
+        }
+
+        function deteksiGudang(item) {
+            const g = (item && item.gudang ? String(item.gudang) : "").trim();
+            if (g === "Gudang IT" || g === "Gudang Minuman" || g === "Gudang Makanan") return g;
+            const kat = (item && item.kategori ? String(item.kategori) : "").toLowerCase();
+            if (kat.includes("(it)") || kat.includes("perangkat it") || kat.includes("jaringan") || kat === "it") return "Gudang IT";
+            if (kat.includes("minuman") || kat.includes("alkohol") || kat.includes("bar")) return "Gudang Minuman";
+            if (kat.includes("makanan") || kat.includes("mentah") || kat.includes("daging") || kat.includes("sayur") || kat.includes("bumbu") || kat.includes("dry store")) return "Gudang Makanan";
+            return g || "Gudang ME";
+        }
+
+        function updateSubLokasiPODatalist(g) {
+            const dl = document.getElementById("subLokasiPOList");
+            if (!dl) return;
+            const found = gudangList.find(x => x.nama === g);
+            const list = found ? (found.sub_lokasi || []) : ["Rak Utama", "Freezer (Daging & Beku)", "Chiller (Sayur & Segar)", "Dry Store (Bumbu & Kering)"];
+            dl.innerHTML = list.map(s => `<option value="${escapeHtml(s)}"></option>`).join("");
+        }
+
+        function onGudangPOChange() {
+            const g = document.getElementById("gudang").value;
+            updateSubLokasiPODatalist(g);
+            const fg = document.getElementById("filterGudang");
+            if (fg && fg.value !== g) {
+                fg.value = g;
+                loadPurchases();
+            }
+        }
+
+        function setTodayDate() {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, "0");
+            const dd = String(now.getDate()).padStart(2, "0");
+            document.getElementById("tanggal_lengkap").value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        function formatTanggal(item) {
+            const raw = item.tanggal_lengkap || "";
+            const parts = raw.split("-");
+            if (parts.length !== 3) return raw;
+            const [yyyy, mm, dd] = parts;
+            const fmt = appSettings.format_tanggal_export || "DD/MM/YYYY";
+            if (fmt === "YYYY-MM-DD") return `${yyyy}-${mm}-${dd}`;
+            if (fmt === "DD-MMM-YYYY") return `${dd} ${BULAN_PENDEK[parseInt(mm, 10)] || mm} ${yyyy}`;
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        function updateLiveClock() {
+            const clockContainer = document.getElementById("clockContainer");
+            if (appSettings.tampilkan_jam === "0") { clockContainer.style.display = "none"; return; }
+            clockContainer.style.display = "block";
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, "0");
+            const seconds = String(now.getSeconds()).padStart(2, "0");
+            let ampm = "";
+            if (appSettings.format_jam_24 === "0") {
+                ampm = hours >= 12 ? " PM" : " AM";
+                hours = hours % 12 || 12;
+            }
+            const zona = appSettings.zona_waktu === "Lokal" ? "" : ` ${appSettings.zona_waktu || "WIB"}`;
+            document.getElementById("liveTime").textContent = `${String(hours).padStart(2, "0")}:${minutes}:${seconds}${ampm}${zona}`;
+            document.getElementById("liveDate").textContent = `${NAMA_HARI[now.getDay()]}, ${String(now.getDate()).padStart(2, "0")} ${NAMA_BULAN[now.getMonth()]} ${now.getFullYear()}`;
+        }
+
+        async function loadSettings() {
+            try {
+                const res = await fetch("/api/settings");
+                const data = await res.json();
+                if (data.settings) appSettings = { ...appSettings, ...data.settings };
+                const logo = document.getElementById("headerLogo");
+                if (appSettings.logo_base64) { logo.src = appSettings.logo_base64; logo.style.display = "block"; }
+            } catch (e) {}
+        }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch("/api/categories");
+                const data = await res.json();
+                categories = data.categories || [];
+                const sel = document.getElementById("filterKategori");
+                sel.innerHTML = `<option value="">Semua Kategori</option>` + categories.map(c =>
+                    `<option value="${escapeHtml(c.nama_kategori)}">${escapeHtml(c.nama_kategori)}</option>`
+                ).join("");
+            } catch (e) {}
+        }
+
+        async function loadMasterBarang() {
+            try {
+                const res = await fetch("/api/master-barang");
+                const data = await res.json();
+                masterBarang = data.barang || [];
+                const dl = document.getElementById("masterList");
+                dl.innerHTML = masterBarang.map(m =>
+                    `<option value="${escapeHtml(m.nama_barang)}">${escapeHtml(m.kode_barang)} | [${escapeHtml(m.gudang || "Gudang ME")}] Stok: ${m.stok_saat_ini} ${escapeHtml(m.satuan)} | Harga Beli: Rp ${Number(m.harga_beli || 0).toLocaleString("id-ID")}</option>`
+                ).join("");
+                renderRestockBanner();
+            } catch (e) {}
+        }
+
+        function renderRestockBanner() {
+            const card = document.getElementById("restockCard");
+            const chips = document.getElementById("restockChips");
+            const kurang = masterBarang.filter(m => m.status !== "aman");
+            if (kurang.length === 0) {
+                card.style.display = "none";
+                return;
+            }
+            chips.innerHTML = kurang.map(m => {
+                const saranBeli = Math.max(Math.round(((m.stok_minimum || 5) - (m.stok_saat_ini || 0) + 5) * 100) / 100, 1);
+                return `
+                    <div class="restock-chip">
+                        <span><strong>${escapeHtml(m.kode_barang)}</strong> [${escapeHtml(m.gudang || "Gudang ME")}] ${escapeHtml(m.nama_barang)} (Sisa: <b>${m.stok_saat_ini} ${escapeHtml(m.satuan)}</b>, Min: ${m.stok_minimum})</span>
+                        <button type="button" onclick="pilihUntukPO(${m.id}, ${saranBeli})">➕ Buat PO</button>
+                    </div>
+                `;
+            }).join("");
+            card.style.display = "block";
+        }
+
+        function pilihUntukPO(masterId, saranJumlah) {
+            const m = masterBarang.find(x => x.id === masterId);
+            if (!m) return;
+            document.getElementById("nama_barang").value = m.nama_barang;
+            document.getElementById("jumlah").value = saranJumlah;
+            document.getElementById("harga_satuan").value = m.harga_beli || 0;
+            onBarangInput();
+            hitungTotalHarga();
+            document.getElementById("supplier").focus();
+        }
+
+        function onBarangInput() {
+            const val = document.getElementById("nama_barang").value.trim().toLowerCase();
+            const hint = document.getElementById("barangHint");
+            if (!val) { hint.style.display = "none"; return; }
+            const found = masterBarang.find(m => m.nama_barang.trim().toLowerCase() === val);
+            if (found) {
+                const curHarga = parseInt(document.getElementById("harga_satuan").value) || 0;
+                if (curHarga === 0 && found.harga_beli > 0) {
+                    document.getElementById("harga_satuan").value = found.harga_beli;
+                }
+                if (found.gudang) {
+                    document.getElementById("gudang").value = found.gudang;
+                    onGudangPOChange();
+                }
+                if (found.sub_lokasi) {
+                    document.getElementById("sub_lokasi").value = found.sub_lokasi;
+                }
+                hint.innerHTML = `🏷️ <strong>${escapeHtml(found.kode_barang)}</strong> [${escapeHtml(found.gudang || "Gudang ME")}${found.sub_lokasi ? " / " + escapeHtml(found.sub_lokasi) : ""}] — Stok saat ini: <strong>${found.stok_saat_ini} ${escapeHtml(found.satuan)}</strong> | Harga beli: Rp ${Number(found.harga_beli || 0).toLocaleString("id-ID")}`;
+                hint.style.display = "block";
+                hitungTotalHarga();
+            } else {
+                hint.innerHTML = `⚠️ Barang belum ada di Master Barang. Silakan daftarkan dulu di Halaman Gudang → tab Master Barang.`;
+                hint.style.display = "block";
+            }
+        }
+
+        function hitungTotalHarga() {
+            const jml = parseFloat(document.getElementById("jumlah").value) || 0;
+            const hrg = parseInt(document.getElementById("harga_satuan").value) || 0;
+            document.getElementById("total_harga").value = Math.round(jml * hrg);
+        }
+
+        async function loadPurchases() {
+            const params = new URLSearchParams();
+            const q = document.getElementById("searchInput").value.trim();
+            const gud = document.getElementById("filterGudang") ? document.getElementById("filterGudang").value : "";
+            const kat = document.getElementById("filterKategori").value;
+            const st = document.getElementById("filterStatus").value;
+            const bln = document.getElementById("filterBulan").value;
+            const thn = document.getElementById("filterTahun").value;
+            if (q) params.set("q", q);
+            if (gud) params.set("gudang", gud);
+            if (kat) params.set("kategori", kat);
+            if (st) params.set("status", st);
+            if (bln) params.set("bulan", bln);
+            if (thn) params.set("tahun", thn);
+
+            const res = await fetch(`/api/purchases?${params.toString()}`);
+            const data = await res.json();
+            let rawPO = (data.purchases || []).map(p => ({ ...p, gudang: deteksiGudang(p) }));
+            if (gud) {
+                rawPO = rawPO.filter(p => p.gudang === gud);
+            }
+            purchases = rawPO;
+            renderTable();
+            updateStats();
+            await loadMasterBarang();
+        }
+
+        function statusBadge(st) {
+            const map = {
+                pengajuan: ["st-pengajuan", "📝 Pengajuan (PR)"],
+                dipesan: ["st-dipesan", "🚚 Dipesan (PO)"],
+                diterima: ["st-diterima", "✅ Diterima di Gudang"],
+                batal: ["st-batal", "✖ Batal"]
+            };
+            const [cls, label] = map[st] || map.dipesan;
+            return `<span class="badge ${cls}">${label}</span>`;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById("poTableBody");
+            if (purchases.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="empty-state">Belum ada data Purchase Order (PO).</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = purchases.map((p, idx) => {
+                const bisaTerima = (p.status === "pengajuan" || p.status === "dipesan");
+                const btnTerima = bisaTerima
+                    ? `<button class="btn-sm btn-terima" onclick="terimaBarang(${p.id})" title="Barang tiba: otomatis tambah stok gudang (+)">📥 Terima ke Gudang</button>`
+                    : "";
+                return `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td style="white-space:nowrap;">${escapeHtml(formatTanggal(p))}</td>
+                        <td style="white-space:nowrap;"><strong>${escapeHtml(p.no_po)}</strong></td>
+                        <td>
+                            <span class="badge">${escapeHtml(p.gudang || "Gudang ME")}</span>
+                            ${p.sub_lokasi ? `<div style="font-size:0.74rem; color:#475569; margin-top:2px;">📍 ${escapeHtml(p.sub_lokasi)}</div>` : ""}
+                        </td>
+                        <td>${escapeHtml(p.supplier || "-")}</td>
+                        <td>
+                            <strong>${escapeHtml(p.nama_barang)}</strong>
+                            <span class="badge">${escapeHtml(p.kode_barang)}</span>
+                            <span class="badge badge-cat">${escapeHtml(p.kategori)}</span>
+                        </td>
+                        <td class="num"><strong>${Number(p.jumlah).toLocaleString("id-ID")}</strong> ${escapeHtml(p.satuan)}</td>
+                        <td class="num">Rp ${Number(p.harga_satuan).toLocaleString("id-ID")}</td>
+                        <td class="num" style="font-weight:700; color:#7c3aed;">Rp ${Number(p.total_harga).toLocaleString("id-ID")}</td>
+                        <td style="white-space:nowrap;">${p.tanggal_expired ? `<span class="badge" style="background:#fef3c7;color:#92400e;">📅 ${escapeHtml(p.tanggal_expired)}</span>` : "-"}</td>
+                        <td>${statusBadge(p.status)}</td>
+                        <td>${escapeHtml(p.keterangan || "-")}</td>
+                        <td class="no-print">
+                            <div class="action-btns">
+                                ${btnTerima}
+                                <button class="btn-sm btn-edit" onclick="editPurchase(${p.id})">Edit</button>
+                                <button class="btn-sm btn-delete" onclick="deletePurchase(${p.id})">Hapus</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function updateStats() {
+            const aktif = purchases.filter(p => p.status !== "batal");
+            const pending = purchases.filter(p => p.status === "pengajuan" || p.status === "dipesan").length;
+            const received = purchases.filter(p => p.status === "diterima").length;
+            const totalRp = aktif.reduce((acc, cur) => acc + (Number(cur.total_harga) || 0), 0);
+
+            document.getElementById("statTotalPO").textContent = purchases.length.toLocaleString("id-ID");
+            document.getElementById("statPendingPO").textContent = pending.toLocaleString("id-ID") + " PO";
+            document.getElementById("statReceivedPO").textContent = received.toLocaleString("id-ID") + " PO";
+            document.getElementById("statTotalRupiah").textContent = "Rp " + totalRp.toLocaleString("id-ID");
+        }
+
+        async function savePurchase(e) {
+            e.preventDefault();
+            const id = document.getElementById("poId").value;
+            const payload = {
+                tanggal_lengkap: document.getElementById("tanggal_lengkap").value,
+                no_po: document.getElementById("no_po").value.trim(),
+                supplier: document.getElementById("supplier").value.trim(),
+                gudang: document.getElementById("gudang").value,
+                sub_lokasi: document.getElementById("sub_lokasi").value.trim(),
+                nama_barang: document.getElementById("nama_barang").value.trim(),
+                jumlah: parseFloat(document.getElementById("jumlah").value) || 0,
+                harga_satuan: parseInt(document.getElementById("harga_satuan").value) || 0,
+                tanggal_expired: document.getElementById("tanggal_expired").value || "",
+                status: document.getElementById("status").value,
+                lokasi_tujuan: document.getElementById("lokasi_tujuan").value.trim(),
+                keterangan: document.getElementById("keterangan").value.trim()
+            };
+            const res = await fetch(id ? `/api/purchases/${id}` : "/api/purchases", {
+                method: id ? "PUT" : "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                resetForm();
+                loadPurchases();
+            } else {
+                const err = await res.json();
+                alert(err.error || "Gagal menyimpan PO");
+            }
+        }
+
+        async function terimaBarang(id) {
+            const p = purchases.find(x => x.id === id);
+            if (!p) return;
+            if (!confirm(`Terima barang "${p.nama_barang}" sebanyak ${p.jumlah} ${p.satuan} dari PO ${p.no_po} ke ${p.gudang || "Gudang"}?\n\nStok di Gudang akan otomatis bertambah (+${p.jumlah}).`)) return;
+            const res = await fetch(`/api/purchases/${id}/terima`, { method: "POST" });
+            if (res.ok) {
+                loadPurchases();
+            } else {
+                const err = await res.json();
+                alert(err.error || "Gagal menerima barang");
+            }
+        }
+
+        async function mintaPinSupervisor(pesan) {
+            const input = prompt(pesan || "🔒 Masukkan PIN Supervisor untuk melanjutkan aksi ini:");
+            if (input === null) return false;
+            try {
+                const res = await fetch("/api/verify-pin", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ pin: input.trim() })
+                });
+                if (res.ok) return true;
+                const err = await res.json();
+                alert(err.error || "PIN Supervisor salah!");
+                return false;
+            } catch (e) {
+                alert("Gagal memverifikasi PIN.");
+                return false;
+            }
+        }
+
+        async function editPurchase(id) {
+            const pinOk = await mintaPinSupervisor("🔒 Keamanan: Masukkan PIN Supervisor untuk MENGEDIT Purchase Order ini:");
+            if (!pinOk) return;
+
+            const p = purchases.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById("poId").value = p.id;
+            document.getElementById("tanggal_lengkap").value = p.tanggal_lengkap;
+            document.getElementById("no_po").value = p.no_po;
+            document.getElementById("supplier").value = p.supplier;
+            document.getElementById("gudang").value = p.gudang || "Gudang ME";
+            onGudangPOChange();
+            document.getElementById("sub_lokasi").value = p.sub_lokasi || "";
+            document.getElementById("nama_barang").value = p.nama_barang;
+            document.getElementById("jumlah").value = p.jumlah;
+            document.getElementById("harga_satuan").value = p.harga_satuan;
+            document.getElementById("total_harga").value = p.total_harga;
+            document.getElementById("tanggal_expired").value = p.tanggal_expired || "";
+            document.getElementById("status").value = p.status;
+            document.getElementById("lokasi_tujuan").value = p.lokasi_tujuan || "Gudang Utama";
+            document.getElementById("keterangan").value = p.keterangan || "";
+            document.getElementById("formTitle").textContent = "✏️ Edit Purchase Order (PO)";
+            document.getElementById("submitBtn").textContent = "Perbarui PO";
+            document.getElementById("cancelBtn").style.display = "inline-block";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        async function deletePurchase(id) {
+            if (!confirm("Yakin ingin menghapus data PO ini?")) return;
+            const pinOk = await mintaPinSupervisor("🔒 Keamanan: Masukkan PIN Supervisor untuk MENGHAPUS Purchase Order ini:");
+            if (!pinOk) return;
+
+            const res = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
+            if (res.ok) loadPurchases();
+        }
+
+        function resetForm() {
+            document.getElementById("poId").value = "";
+            document.getElementById("no_po").value = "";
+            document.getElementById("supplier").value = "";
+            document.getElementById("gudang").value = "Gudang ME";
+            document.getElementById("sub_lokasi").value = "";
+            document.getElementById("nama_barang").value = "";
+            document.getElementById("jumlah").value = 1;
+            document.getElementById("harga_satuan").value = 0;
+            document.getElementById("total_harga").value = 0;
+            document.getElementById("tanggal_expired").value = "";
+            document.getElementById("status").value = "dipesan";
+            document.getElementById("lokasi_tujuan").value = "Gudang Utama";
+            document.getElementById("keterangan").value = "";
+            document.getElementById("barangHint").style.display = "none";
+            document.getElementById("formTitle").textContent = "➕ Buat Purchase Order (PO) Baru";
+            document.getElementById("submitBtn").textContent = "Simpan PO";
+            document.getElementById("cancelBtn").style.display = "none";
+            setTodayDate();
+        }
+
+        function exportPurchaseCSV() {
+            if (purchases.length === 0) {
+                alert("Tidak ada data PO untuk di-export.");
+                return;
+            }
+            const headers = [
+                "No", "Tanggal", "No. PO", "Gudang", "Sub-Lokasi", "Supplier", "Kategori", "Kode Barang",
+                "Nama Barang", "Satuan", "Jumlah Beli", "Harga Satuan (Rp)", "Total Harga (Rp)",
+                "Tgl Kadaluarsa", "Status", "Keterangan Lokasi", "Keterangan"
+            ];
+            let totalQty = 0, totalNilai = 0;
+            const rows = purchases.map((p, i) => {
+                if (p.status !== "batal") {
+                    totalQty += Number(p.jumlah) || 0;
+                    totalNilai += Number(p.total_harga) || 0;
+                }
+                return [
+                    i + 1,
+                    `"${formatTanggal(p)}"`,
+                    `"${(p.no_po || "").replace(/"/g, '""')}"`,
+                    `"${(p.gudang || "Gudang ME").replace(/"/g, '""')}"`,
+                    `"${(p.sub_lokasi || "-").replace(/"/g, '""')}"`,
+                    `"${(p.supplier || "").replace(/"/g, '""')}"`,
+                    `"${(p.kategori || "").replace(/"/g, '""')}"`,
+                    `"${(p.kode_barang || "").replace(/"/g, '""')}"`,
+                    `"${(p.nama_barang || "").replace(/"/g, '""')}"`,
+                    `"${(p.satuan || "").replace(/"/g, '""')}"`,
+                    p.jumlah,
+                    p.harga_satuan,
+                    p.total_harga,
+                    `"${(p.tanggal_expired || "-").replace(/"/g, '""')}"`,
+                    `"${p.status.toUpperCase()}"`,
+                    `"${(p.lokasi_tujuan || "").replace(/"/g, '""')}"`,
+                    `"${(p.keterangan || "").replace(/"/g, '""')}"`
+                ];
+            });
+            totalQty = Math.round(totalQty * 1000) / 1000;
+            const blank = (n) => Array(n).fill("");
+            rows.push(blank(17));
+            rows.push([...blank(9), `"TOTAL PEMBELIAN AKTIF"`, totalQty, "", totalNilai, "", "", "", ""]);
+
+            const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `laporan_purchase_po_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        setTodayDate();
+        setInterval(updateLiveClock, 1000);
+        loadNetworkInfo();
+        loadSettings();
+        loadCategories();
+        loadPurchases();
+    </script>
+</body>
+</html>
